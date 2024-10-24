@@ -39,6 +39,9 @@ uint16_t RC_LOW[RC_NUM_CHANNELS] = {780, 992, 1032, 992, 992, 992};
 uint16_t RC_MID[RC_NUM_CHANNELS] = {1284, 0, 1490, 1490, 0, 0};
 uint16_t RC_HIGH[RC_NUM_CHANNELS] = {1836, 1990, 1955, 1948, 1948, 1948};
 
+//Transformed Values: -100 - 100 & 0 - 100
+int RC_TRANSFORMED_VALUES[RC_NUM_CHANNELS];
+
 //What percentage deadzone is allowed
 uint16_t RC_DZPERCENT[RC_NUM_CHANNELS] = {5, 5, 5, 5, 5, 5};
 
@@ -80,12 +83,12 @@ void loop()
   rc_deadzone_adjust();
 
   //output our values to the serial port in a format the plotter can use
-  Serial.print(RC_VALUES[RC_CH1]); Serial.print(",");
-  Serial.print(RC_VALUES[RC_CH2]); Serial.print(",");
-  Serial.print(RC_VALUES[RC_CH3]); Serial.print(",");
-  Serial.print(RC_VALUES[RC_CH4]); Serial.print(",");
-  Serial.print(RC_VALUES[RC_CH5]); Serial.print(",");
-  Serial.print(RC_VALUES[RC_CH6]); Serial.print("\n");
+  Serial.print(RC_TRANSFORMED_VALUES[RC_CH1]); Serial.print(","); //CAN ALSO PRINT "RC_TRANSFORMED_VALUE" VALUE CORRECTED FOR DEADZONE
+  Serial.print(RC_TRANSFORMED_VALUES[RC_CH2]); Serial.print(",");
+  Serial.print(RC_TRANSFORMED_VALUES[RC_CH3]); Serial.print(",");
+  Serial.print(RC_TRANSFORMED_VALUES[RC_CH4]); Serial.print(",");
+  Serial.print(RC_TRANSFORMED_VALUES[RC_CH5]); Serial.print(",");
+  Serial.print(RC_TRANSFORMED_VALUES[RC_CH6]); Serial.print("\n");
 }
 
 
@@ -145,26 +148,31 @@ void rc_deadzone_adjust()
   for (int i = 0; i < RC_NUM_CHANNELS; i++)
   {
     //no division by zero
+    if (RC_HIGH[i] == RC_LOW[i])
+    {
+      continue;
+    }
     
-    float newval = 0;
+    RC_TRANSFORMED_VALUES[i] = 0;
+
     if (RC_CHANNEL_MODE[i] == 0)
     {
       //if this is a joystick with a midpoint, our deadzone is aroudn the middle
-      newval = map((float)RC_VALUES[i], (float)RC_HIGH[i], (float)RC_LOW[i], 100.0, -100.0);
+      RC_TRANSFORMED_VALUES[i] = map((float)RC_VALUES[i], (float)RC_HIGH[i], (float)RC_LOW[i], 100.0f, -100.0f);
 
-      if (abs(newval) < RC_DZPERCENT[i])
+      if (abs(RC_TRANSFORMED_VALUES[i]) < RC_DZPERCENT[i])
       {
         //reset to midpoint
-        RC_VALUES[i] = RC_MID[i];
+        RC_TRANSFORMED_VALUES[i] = 0;
       }
     }
     else if (RC_CHANNEL_MODE[i] == 1)
     {
-      newval = map((float)RC_VALUES[i], (float)RC_HIGH[i], (float)RC_LOW[i], 100.0, 0.0);
+      RC_TRANSFORMED_VALUES[i] = map((float)RC_VALUES[i], (float)RC_HIGH[i], (float)RC_LOW[i], 100.0f, 0.0f);
 
-      if (abs(newval) < RC_DZPERCENT[i])
+      if (abs(RC_TRANSFORMED_VALUES[i]) < RC_DZPERCENT[i])
       {
-        RC_VALUES[i] = RC_LOW[i];
+        RC_TRANSFORMED_VALUES[i] = 0;
       }
     }
   }
